@@ -6,3 +6,4 @@ Paris Helsinki 7 10 300
 Paris Atina 3 40 200
 Londra Paris 0 40 100
 Londra Atina 3 10 175 
+Moscow Helsinki 1 20 130

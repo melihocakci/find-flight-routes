@@ -38,7 +38,7 @@ typedef struct pathlist
     struct path *head;
 } pathlist;
 
-void add_path(graph *flights, pathlist *paths, int dur, int price)
+void addPath(graph *flights, pathlist *paths, int dur, int price)
 {
     path *newPath = (path *)malloc(sizeof(path));
     newPath->duration = dur - 60;
@@ -59,7 +59,7 @@ void DFS(graph *flights, pathlist *paths, int cur, int dest, int k, int dur, int
 {
     if (cur == dest)
     {
-        add_path(flights, paths, dur, price);
+        addPath(flights, paths, dur, price);
     }
     else if (k != -1)
     {
@@ -78,7 +78,7 @@ void DFS(graph *flights, pathlist *paths, int cur, int dest, int k, int dur, int
     }
 }
 
-int add_or_find_vertex(graph *flights, char *str)
+int getVertex(graph *flights, char *str)
 {
     int i;
     for (i = 0; i < flights->num; i++)
@@ -118,23 +118,69 @@ void addEdge(graph *flights, int v1, int v2, int dur, int price)
     flights->list[v2]->head = newEdge;
 }
 
+int getDur(path *node)
+{
+    return node->duration;
+}
+
+int getPrice(path *node)
+{
+    return node->price;
+}
+
+void sortPaths(path *head, int (*data)(path *))
+{
+    path *i = head;
+    path *j = head;
+    path tmp;
+    while (i != NULL)
+    {
+        while (j->next != NULL)
+        {
+            if ((*data)(j) > (*data)(j->next))
+            {
+                tmp.duration = j->next->duration;
+                tmp.price = j->next->price;
+                tmp.stops = j->next->stops;
+
+                j->next->duration = j->duration;
+                j->next->price = j->price;
+                j->next->stops = j->stops;
+
+                j->duration = tmp.duration;
+                j->price = tmp.price;
+                j->stops = tmp.stops;
+            }
+            j = j->next;
+        }
+        j = head;
+        i = i->next;
+    }
+}
+
 int main()
 {
-    graph *flights = (graph *)malloc(sizeof(graph));
-    FILE *fp = fopen("sample.txt", "r");
+    char *str1 = (char *)malloc(sizeof(char) * 16);
+    char *str2 = (char *)malloc(sizeof(char) * 16);
 
+    printf("Enter file name for flight list: ");
+    scanf("%s", str1);
+    FILE *fp = fopen(str1, "r");
+
+    graph *flights = (graph *)malloc(sizeof(graph));
     flights->num = 0;
     flights->list = (vertex **)malloc(sizeof(vertex *));
 
-    char str1[16], str2[16];
-    int i, hour, minute, price, v1, v2;
-    for (i = 0; i < 8; i++)
+    int i = 0, hour, minute, price, v1, v2;
+    do
     {
-        fscanf(fp, "%s %s %d %d %d", str1, str2, &hour, &minute, &price);
-        v1 = add_or_find_vertex(flights, str1);
-        v2 = add_or_find_vertex(flights, str2);
+        fscanf(fp, "%s %s %d %d %d ", str1, str2, &hour, &minute, &price);
+        v1 = getVertex(flights, str1);
+        v2 = getVertex(flights, str2);
         addEdge(flights, v1, v2, hour * 60 + minute, price);
-    }
+        i++;
+    } while (!feof(fp));
+
     fclose(fp);
 
     edge *edges;
@@ -146,63 +192,110 @@ int main()
             printf(" -> %s", flights->list[edges->index]->name);
         }
     }
-    printf("\n\n");
-
-    for (i = 0; i < flights->num; i++)
-    {
-        flights->list[i]->visited = false;
-    }
-
-    pathlist *paths = (pathlist *)malloc(sizeof(pathlist));
-    paths->count = 0;
-    paths->head = NULL;
-
-    int src = 0;
-    int dest = 4;
-    int k = 20;
-
-    DFS(flights, paths, src, dest, k, 0, 0);
 
     char *stoplist = (char *)malloc(sizeof(char) * 50);
-
-    if (paths->count == 0)
-    {
-        printf("No results found");
-        return 0;
-    }
-
-    printf("|Source\t\t|Destination\t|Hour\t|Minute\t|Price\t|Stop\n");
-    printf("+---------------+---------------+-------+-------+-------+------------------------\n");
-
     path *node;
-    bool stops;
-    for (node = paths->head; node != NULL; node = node->next)
+    bool stopsUsed;
+    int k;
+    int src;
+    int dest;
+
+    pathlist *paths = (pathlist *)malloc(sizeof(pathlist));
+
+    while (true)
     {
-        strcpy(stoplist, "");
-        node->stops[src] = false;
-        stops = false;
+
+        printf("\n\nsource: ");
+        scanf("%s", str1);
+        printf("destination: ");
+        scanf("%s", str2);
+        printf("max stop count: ");
+        scanf("%d", &k);
+
         for (i = 0; i < flights->num; i++)
         {
-            if (node->stops[i])
-            {
-                strcat(stoplist, flights->list[i]->name);
-                strcat(stoplist, ", ");
-                stops = true;
-            }
+            flights->list[i]->visited = false;
         }
 
-        if (!stops)
+        src = getVertex(flights, str1);
+        dest = getVertex(flights, str2);
+
+        paths->count = 0;
+        paths->head = NULL;
+
+        DFS(flights, paths, src, dest, k, 0, 0);
+
+        int choice;
+        printf("sort by (1- duration, 2- price): ");
+        scanf("%d", &choice);
+
+        if (choice == 1)
         {
-            strcpy(stoplist, "None");
+            sortPaths(paths->head, getDur);
         }
         else
         {
-            stoplist[strlen(stoplist) - 2] = '\0';
+            sortPaths(paths->head, getPrice);
         }
 
-        printf("|%-15s|%-15s", flights->list[src]->name, flights->list[dest]->name);
-        printf("|%d\t|%d\t|%d\t|%s\n", node->duration / 60, node->duration % 60, node->price, stoplist);
-    }
+        printf("save results to file (1- yes, 2- no): ");
+        scanf("%d", &choice);
+        printf("\n");
 
-    free(stoplist);
+        if (choice == 1)
+        {
+            fp = fopen("results.txt", "w");
+        }
+
+        if (paths->count == 0)
+        {
+            printf("No results found\n");
+        }
+        else
+        {
+            printf("|Source         |Destination    |Hour   |Minute |Price  |Stop\n");
+            printf("+---------------+---------------+-------+-------+-------+---------------\n");
+
+            if (choice == 1)
+            {
+                fprintf(fp, "|Source         |Destination    |Hour   |Minute |Price  |Stop\n");
+                fprintf(fp, "+---------------+---------------+-------+-------+-------+---------------\n");
+            }
+
+            for (node = paths->head; node != NULL; node = node->next)
+            {
+                strcpy(stoplist, "");
+                node->stops[src] = false;
+                stopsUsed = false;
+                for (i = 0; i < flights->num; i++)
+                {
+                    if (node->stops[i])
+                    {
+                        strcat(stoplist, flights->list[i]->name);
+                        strcat(stoplist, ", ");
+                        stopsUsed = true;
+                    }
+                }
+
+                if (stopsUsed == false)
+                {
+                    strcpy(stoplist, "None");
+                }
+                else
+                {
+                    stoplist[strlen(stoplist) - 2] = '\0';
+                }
+
+                printf("|%-15s|%-15s", flights->list[src]->name, flights->list[dest]->name);
+                printf("|%-7d|%-7d|%-7d|%s\n", node->duration / 60, node->duration % 60, node->price, stoplist);
+
+                if (choice == 1)
+                {
+                    fprintf(fp, "|%-15s|%-15s", flights->list[src]->name, flights->list[dest]->name);
+                    fprintf(fp, "|%-7d|%-7d|%-7d|%s\n", node->duration / 60, node->duration % 60, node->price, stoplist);
+                }
+            }
+            fclose(fp);
+        }
+    }
 }
