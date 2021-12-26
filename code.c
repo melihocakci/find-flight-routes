@@ -13,7 +13,6 @@ typedef struct edge
 
 typedef struct vertex
 {
-    int index;
     char name[16];
     bool visited;
     struct edge *head;
@@ -30,19 +29,19 @@ typedef struct path
     bool *stops;
     int duration;
     int price;
-    path *next;
+    struct path *next;
 } path;
 
 typedef struct pathlist
 {
     int count;
-    path *head;
+    struct path *head;
 } pathlist;
 
 void add_path(graph *flights, pathlist *paths, int dur, int price)
 {
     path *newPath = (path *)malloc(sizeof(path));
-    newPath->duration = dur;
+    newPath->duration = dur - 60;
     newPath->price = price;
     newPath->stops = malloc(sizeof(bool) * flights->num);
     int i;
@@ -56,7 +55,7 @@ void add_path(graph *flights, pathlist *paths, int dur, int price)
     paths->count++;
 }
 
-void DFS(graph *flights, pathlist *paths, int k, int cur, int dest, int dur, int price)
+void DFS(graph *flights, pathlist *paths, int cur, int dest, int k, int dur, int price)
 {
     if (cur == dest)
     {
@@ -71,7 +70,7 @@ void DFS(graph *flights, pathlist *paths, int k, int cur, int dest, int dur, int
         {
             if (!flights->list[node->index]->visited)
             {
-                DFS(flights, paths, k - 1, node->index, dest, dur + node->duration + 1, price + node->price);
+                DFS(flights, paths, node->index, dest, k - 1, dur + node->duration + 60, price + node->price);
             }
         }
 
@@ -93,11 +92,10 @@ int add_or_find_vertex(graph *flights, char *str)
     flights->num++;
     flights->list = realloc(flights->list, sizeof(vertex *) * flights->num);
     vertex *newVertex = (vertex *)malloc(sizeof(vertex));
-    newVertex->index = flights->num - 1;
     strcpy(newVertex->name, str);
     newVertex->head = NULL;
-    flights->list[newVertex->index] = newVertex;
-    return newVertex->index;
+    flights->list[flights->num - 1] = newVertex;
+    return flights->num - 1;
 }
 
 void addEdge(graph *flights, int v1, int v2, int dur, int price)
@@ -137,18 +135,74 @@ int main()
         v2 = add_or_find_vertex(flights, str2);
         addEdge(flights, v1, v2, hour * 60 + minute, price);
     }
+    fclose(fp);
 
-    edge *iter;
+    edge *edges;
     for (i = 0; i < flights->num; i++)
     {
         printf("\n%d %s", i, flights->list[i]->name);
-        iter = iter = flights->list[i]->head;
-        while (iter != NULL)
+        for (edges = flights->list[i]->head; edges != NULL; edges = edges->next)
         {
-            printf(" -> %d %d %d", iter->index, iter->duration, iter->price);
-            iter = iter->next;
+            printf(" -> %s", flights->list[edges->index]->name);
         }
     }
+    printf("\n\n");
 
-    fclose(fp);
+    for (i = 0; i < flights->num; i++)
+    {
+        flights->list[i]->visited = false;
+    }
+
+    pathlist *paths = (pathlist *)malloc(sizeof(pathlist));
+    paths->count = 0;
+    paths->head = NULL;
+
+    int src = 0;
+    int dest = 4;
+    int k = 20;
+
+    DFS(flights, paths, src, dest, k, 0, 0);
+
+    char *stoplist = (char *)malloc(sizeof(char) * 50);
+
+    if (paths->count == 0)
+    {
+        printf("No results found");
+        return 0;
+    }
+
+    printf("|Source\t\t|Destination\t|Hour\t|Minute\t|Price\t|Stop\n");
+    printf("+---------------+---------------+-------+-------+-------+------------------------\n");
+
+    path *node;
+    bool stops;
+    for (node = paths->head; node != NULL; node = node->next)
+    {
+        strcpy(stoplist, "");
+        node->stops[src] = false;
+        stops = false;
+        for (i = 0; i < flights->num; i++)
+        {
+            if (node->stops[i])
+            {
+                strcat(stoplist, flights->list[i]->name);
+                strcat(stoplist, ", ");
+                stops = true;
+            }
+        }
+
+        if (!stops)
+        {
+            strcpy(stoplist, "None");
+        }
+        else
+        {
+            stoplist[strlen(stoplist) - 2] = '\0';
+        }
+
+        printf("|%-15s|%-15s", flights->list[src]->name, flights->list[dest]->name);
+        printf("|%d\t|%d\t|%d\t|%s\n", node->duration / 60, node->duration % 60, node->price, stoplist);
+    }
+
+    free(stoplist);
 }
