@@ -1,6 +1,0 @@
-|Source         |Destination    |Hour   |Minute |Price  |Stop
-+---------------+---------------+-------+-------+-------+---------------
-|Berlin         |Moscow         |8      |30     |380    |Helsinki
-|Berlin         |Moscow         |11     |45     |530    |Helsinki, Paris
-|Berlin         |Moscow         |22     |30     |950    |Istanbul, Atina, Helsinki, Paris
-|Berlin         |Moscow         |23     |40     |1025   |Istanbul, Atina, Helsinki, Paris, Londra

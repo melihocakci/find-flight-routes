@@ -38,50 +38,55 @@ typedef struct pathlist
     struct path *head;
 } pathlist;
 
+// listeye yeni rota ekler
 void addPath(graph *flights, pathlist *paths, int dur, int price)
 {
-    path *newPath = (path *)malloc(sizeof(path));
+    path *newPath = (path *)malloc(sizeof(path)); // yeni rota
     newPath->duration = dur - 60;
     newPath->price = price;
     newPath->stops = malloc(sizeof(bool) * flights->num);
     int i;
     for (i = 0; i < flights->num; i++)
     {
-        newPath->stops[i] = flights->list[i]->visited;
+        newPath->stops[i] = flights->list[i]->visited; // rotadaki duraklari listele
     }
 
+    // rotayi listeye ekle
     newPath->next = paths->head;
     paths->head = newPath;
     paths->count++;
 }
 
+// depth first search algoritmasi
 void DFS(graph *flights, pathlist *paths, int cur, int dest, int k, int dur, int price)
 {
-    if (cur == dest)
+    if (cur == dest) // bitis noktasini kontrol et
     {
-        addPath(flights, paths, dur, price);
+        addPath(flights, paths, dur, price); // rota ekle
     }
-    else if (k != -1)
+    else if (k != -1) // fonksiyonu yeniden cagir
     {
-        flights->list[cur]->visited = true;
+        flights->list[cur]->visited = true; // ziyaret edildi
 
         edge *node;
         for (node = flights->list[cur]->head; node != NULL; node = node->next)
         {
             if (!flights->list[node->index]->visited)
             {
+                // recursive cagri
                 DFS(flights, paths, node->index, dest, k - 1, dur + node->duration + 60, price + node->price);
             }
         }
 
-        flights->list[cur]->visited = false;
+        flights->list[cur]->visited = false; // ziyaret edilmedi
     }
 }
 
+// noktanin indisini dondurur. nokta yok ise once ekler
 int getVertex(graph *flights, char *str)
 {
     int i;
-    for (i = 0; i < flights->num; i++)
+    for (i = 0; i < flights->num; i++) // noktalari kontrol et
     {
         if (strcmp(flights->list[i]->name, str) == 0)
         {
@@ -89,6 +94,7 @@ int getVertex(graph *flights, char *str)
         }
     }
 
+    // listede yok ise yeni nokta olustur
     flights->num++;
     flights->list = realloc(flights->list, sizeof(vertex *) * flights->num);
     vertex *newVertex = (vertex *)malloc(sizeof(vertex));
@@ -98,9 +104,12 @@ int getVertex(graph *flights, char *str)
     return flights->num - 1;
 }
 
+// grafa kenar ekle
 void addEdge(graph *flights, int v1, int v2, int dur, int price)
 {
-    edge *newEdge;
+    edge *newEdge; // yeni kenar
+
+    // ilk noktaya kenar ekle
     newEdge = (edge *)malloc(sizeof(edge));
     newEdge->index = v2;
     newEdge->duration = dur;
@@ -109,6 +118,7 @@ void addEdge(graph *flights, int v1, int v2, int dur, int price)
     newEdge->next = flights->list[v1]->head;
     flights->list[v1]->head = newEdge;
 
+    // ikinci noktaya kenar ekle
     newEdge = (edge *)malloc(sizeof(edge));
     newEdge->index = v1;
     newEdge->duration = dur;
@@ -118,16 +128,19 @@ void addEdge(graph *flights, int v1, int v2, int dur, int price)
     flights->list[v2]->head = newEdge;
 }
 
+// rotadan siralama icin alinacak degeri dondurur
 int getDur(path *node)
 {
     return node->duration;
 }
 
+// rotadan siralama icin alinacak degeri dondurur
 int getPrice(path *node)
 {
     return node->price;
 }
 
+// rotalari siralayan bubble sort fonksiyonu
 void sortPaths(path *head, int (*data)(path *))
 {
     path *i = head;
@@ -160,17 +173,18 @@ void sortPaths(path *head, int (*data)(path *))
 
 int main()
 {
-    char *str1 = (char *)malloc(sizeof(char) * 16);
-    char *str2 = (char *)malloc(sizeof(char) * 16);
+    char *str1 = (char *)malloc(sizeof(char) * 16); // string 1
+    char *str2 = (char *)malloc(sizeof(char) * 16); // string 2
 
     printf("Enter file name for flight list: ");
     scanf("%s", str1);
-    FILE *fp = fopen(str1, "r");
+    FILE *fp = fopen(str1, "r"); // bilgilerin okunacagi dosya
 
-    graph *flights = (graph *)malloc(sizeof(graph));
+    graph *flights = (graph *)malloc(sizeof(graph)); // grafin tutulacagi degisken
     flights->num = 0;
     flights->list = (vertex **)malloc(sizeof(vertex *));
 
+    // dosyadan okuma
     int i = 0, hour, minute, price, v1, v2;
     do
     {
@@ -183,6 +197,7 @@ int main()
 
     fclose(fp);
 
+    // grafi ekrana yazdirma
     edge *edges;
     for (i = 0; i < flights->num; i++)
     {
@@ -193,12 +208,12 @@ int main()
         }
     }
 
-    char *stoplist = (char *)malloc(sizeof(char) * 50);
-    path *node;
-    bool stopsUsed;
-    int k;
-    int src;
-    int dest;
+    char *stoplist = (char *)malloc(sizeof(char) * 50); // duraklari tutan string
+    path *node;                                         // rotalara bakmak icin degisken
+    bool stopsUsed;                                     // durak kullanilma kontrolu
+    int k;                                              // durak sayisi
+    int src;                                            // baslangic noktasi
+    int dest;                                           // bitis noktasi
 
     pathlist *paths = (pathlist *)malloc(sizeof(pathlist));
 
@@ -206,30 +221,30 @@ int main()
     {
 
         printf("\n\nsource: ");
-        scanf("%s", str1);
+        scanf("%s", str1); // baslangic sehir ismi
         printf("destination: ");
-        scanf("%s", str2);
+        scanf("%s", str2); // bitis sehir ismi
         printf("max stop count: ");
-        scanf("%d", &k);
+        scanf("%d", &k); // durak sayisi
 
         for (i = 0; i < flights->num; i++)
         {
             flights->list[i]->visited = false;
         }
 
-        src = getVertex(flights, str1);
-        dest = getVertex(flights, str2);
+        src = getVertex(flights, str1);  // baslangic
+        dest = getVertex(flights, str2); // bitis
 
         paths->count = 0;
         paths->head = NULL;
 
-        DFS(flights, paths, src, dest, k, 0, 0);
+        DFS(flights, paths, src, dest, k, 0, 0); // fonksiyon cagrisi
 
-        int choice;
+        int choice; // kullanici tercihleri
         printf("sort by (1- duration, 2- price): ");
         scanf("%d", &choice);
 
-        if (choice == 1)
+        if (choice == 1) // tercihe gore siralama
         {
             sortPaths(paths->head, getDur);
         }
@@ -239,12 +254,12 @@ int main()
         }
 
         printf("save results to file (1- yes, 2- no): ");
-        scanf("%d", &choice);
+        scanf("%d", &choice); // dosyaya yazdirma tercihi
         printf("\n");
 
         if (choice == 1)
         {
-            fp = fopen("results.txt", "w");
+            fp = fopen("results.txt", "w"); // cikis dosyasi
         }
 
         if (paths->count == 0)
@@ -285,12 +300,13 @@ int main()
                 {
                     stoplist[strlen(stoplist) - 2] = '\0';
                 }
-
+                // sonuclarin yazdirilmasi
                 printf("|%-15s|%-15s", flights->list[src]->name, flights->list[dest]->name);
                 printf("|%-7d|%-7d|%-7d|%s\n", node->duration / 60, node->duration % 60, node->price, stoplist);
 
                 if (choice == 1)
                 {
+                    // sonuclarin dosyaya yazdirilmasi
                     fprintf(fp, "|%-15s|%-15s", flights->list[src]->name, flights->list[dest]->name);
                     fprintf(fp, "|%-7d|%-7d|%-7d|%s\n", node->duration / 60, node->duration % 60, node->price, stoplist);
                 }
